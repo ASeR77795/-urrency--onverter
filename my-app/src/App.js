@@ -1,20 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Block from './Block/Block';
 
 const App = () => {
 	const [fromCurrency, setFromCurrency] = useState('UAH');
 	const [toCurrency, setToCurrency] = useState('USD');
 	const [fromPrice, setFromPrice] = useState(0);
-	const [toPrice, setToPrice] = useState(0);
+	const [toPrice, setToPrice] = useState(1);
 
-	const [rates, setRates] = useState({});
-
+	const ratesRef = useRef({});
 	useEffect(() => {
 		fetch('https://www.cbr-xml-daily.ru/latest.js')
 			.then(res => res.json())
 			.then(json => {
-				setRates(json.rates);
-				console.log(json.rates);
+				ratesRef.current = json.rates;
+				onChangeToPrice(1);
 			})
 			.catch(err => {
 				console.log(err);
@@ -22,29 +21,45 @@ const App = () => {
 	}, []);
 
 	const onChangeFromPrise = value => {
-		const price = value / rates[fromCurrency];
-		const result = price * rates[toCurrency];
-		setFromPrice(value);
+		const result =
+			(ratesRef.current[toCurrency] / ratesRef.current[fromCurrency]) * value;
 		setToPrice(result);
+		setFromPrice(value);
 	};
 	const onChangeToPrice = value => {
-		const price = value / rates[toCurrency];
-		const result = price * rates[fromCurrency];
-		setToPrice(value);
+		const result =
+			(ratesRef.current[fromCurrency] / ratesRef.current[toCurrency]) * value;
 		setFromPrice(result);
+		setToPrice(value);
 	};
+	useEffect(() => {
+		onChangeFromPrise(fromPrice);
+	}, [fromCurrency]);
+	useEffect(() => {
+		onChangeToPrice(toPrice);
+	}, [toCurrency]);
+	const onChangeFromCurrency = cur => {
+		setFromCurrency(cur);
+		onChangeFromPrise(fromPrice);
+	};
+	const onChangeToCurrency = cur => {
+		setToCurrency(cur);
+		onChangeToPrice(toPrice);
+	};
+
+	useEffect(() => {}, []);
 	return (
 		<div className='App'>
 			<Block
 				value={fromPrice}
 				currency={fromCurrency}
-				onChangeCurrency={setFromCurrency}
+				onChangeCurrency={onChangeFromCurrency}
 				onChangeValue={onChangeFromPrise}
 			/>
 			<Block
 				value={toPrice}
 				currency={toCurrency}
-				onChangeCurrency={setToCurrency}
+				onChangeCurrency={onChangeToCurrency}
 				onChangeValue={onChangeToPrice}
 			/>
 		</div>
